@@ -1,0 +1,41 @@
+import requests
+import json
+import msal
+from collections import Counter
+import pandas as pd
+
+# 使用你的應用設定
+config = {
+    "client_id" : "your_client_id",
+    "scope" : ["https://graph.microsoft.com/.default"],
+    "client_secret" : "your_client_secret",
+    "authority" : "https://login.microsoftonline.com/your_tenant_id",
+    "endpoint" : "https://graph.microsoft.com/v1.0/me/drive/root:/path_to_your_file.txt:/content"
+}
+
+# 建立客戶端
+app = msal.ConfidentialClientApplication(
+    config["client_id"], 
+    authority=config["authority"], 
+    client_credential=config["client_secret"],
+)
+
+# 取得令牌
+result = app.acquire_token_silent(config["scope"], account=None)
+access_token = result['access_token']
+
+# 取得文件
+headers = {'Authorization': 'Bearer ' + access_token}
+response = requests.get(config["endpoint"], headers=headers)
+text = response.text
+
+# 統計數字和文字
+counter = Counter(text.split())
+df = pd.DataFrame.from_dict(counter, orient='index').reset_index()
+df = df.rename(columns={'index':'word', 0:'count'})
+
+# 排列數字和文字
+df = df.sort_values(by='count', ascending=False)
+
+# 印出結果
+print(df)
